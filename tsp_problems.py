@@ -42,3 +42,5 @@ def create_tsp_graph_5nodes():
 
 if __name__ == "__main__":
     optimal_path, total_distance = solve_tsp_with_qaoa(create_tsp_graph_3nodes)
+    # optimal_path, total_distance = solve_tsp_with_qaoa(create_tsp_graph_4nodes)
+    # optimal_path, total_distance = solve_tsp_with_qaoa(create_tsp_graph_5nodes)
