@@ -2,11 +2,11 @@ import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
 from itertools import combinations
-from qiskit import QuantumCircuit, Aer
+from qiskit import Aer
 from qiskit.algorithms import QAOA
 from qiskit.algorithms.optimizers import COBYLA
 from qiskit.utils import QuantumInstance
-from qiskit.opflow import PauliSumOp, PauliOp
+from qiskit.opflow import PauliOp
 from qiskit.quantum_info import Pauli
 
 def decode_solution(result, n_cities):
