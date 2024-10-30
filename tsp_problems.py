@@ -1,5 +1,5 @@
 import numpy as np
-from qaoa_solution import solve_tsp_with_qaoa
+from qaoa_solution2 import solve_tsp_with_qaoa
 
 def create_tsp_graph_3nodes():
     """
