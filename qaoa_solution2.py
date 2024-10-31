@@ -2,10 +2,10 @@ import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
 from itertools import combinations
-from qiskit import Aer
+from qiskit_aer import QasmSimulator
 from qiskit.algorithms import QAOA
 from qiskit.algorithms.optimizers import COBYLA
-from qiskit.utils import QuantumInstance
+from qiskit.primitives import Sampler
 from qiskit.opflow import PauliOp
 from qiskit.quantum_info import Pauli
 from qiskit_ibm_runtime import QiskitRuntimeService
@@ -133,7 +133,7 @@ def solve_tsp_with_qaoa(distances, cities, useSimulator=True, visualize=False):
     optimizer = COBYLA(maxiter=500)
 
     if useSimulator:
-        backend = Aer.get_backend('qasm_simulator')
+        backend = QasmSimulator()
     else:
             # Save the IBM Quantum Experience Credentials only for first run and DO NOT COMMIT the Token in GIT repo!
         # QiskitRuntimeService.save_account(channel="ibm_quantum", token="<YOUR-TOKEN>", overwrite=True, set_as_default=True)
@@ -147,16 +147,9 @@ def solve_tsp_with_qaoa(distances, cities, useSimulator=True, visualize=False):
         
         print("Running on current least busy backend:", backend)
 
-    quantum_instance = QuantumInstance(
-        backend,
-        shots=4096,
-        seed_simulator=123,
-        seed_transpiler=123
-    )
-
     qaoa = QAOA(
         optimizer=optimizer,
-        quantum_instance=quantum_instance,
+        quantum_instance=backend,
         reps=p,
         initial_point=[np.pi/3] * (2*p)
     )

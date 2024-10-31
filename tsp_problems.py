@@ -1,3 +1,4 @@
+import time
 import numpy as np
 from qaoa_solution2 import solve_tsp_with_qaoa
 
@@ -61,6 +62,12 @@ if __name__ == "__main__":
     # optimal_path, total_distance = solve_tsp_with_qaoa(create_tsp_graph_3nodes)
     # optimal_path, total_distance = solve_tsp_with_qaoa(create_tsp_graph_4nodes)
     # optimal_path, total_distance = solve_tsp_with_qaoa(create_tsp_graph_5nodes)
-    for n in range(3, 4):
+    for n in range(3, 5):
+        start_time = time.time()
+
         distances, cities = create_tsp_graph(n)
         solve_tsp_with_qaoa(distances, cities)
+
+        end_time = time.time()
+        runtime_duration = end_time - start_time
+        print(f"Script ran for: {runtime_duration // 60:.2f} minutes")
