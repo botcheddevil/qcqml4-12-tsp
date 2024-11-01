@@ -1,15 +1,16 @@
-import traceback
-import numpy as np
-import networkx as nx
-import matplotlib.pyplot as plt
 from graph import visualize_graph
 from itertools import combinations
+import numpy as np
+from qiskit.result.distributions.quasi import QuasiDistribution
 from qiskit_aer import QasmSimulator
 from qiskit_algorithms.minimum_eigensolvers.qaoa import QAOA
-from qiskit_algorithms.optimizers import COBYLA
+from qiskit_algorithms.optimizers import SPSA
 from qiskit.quantum_info import SparsePauliOp
-from qiskit_ibm_runtime import QiskitRuntimeService, SamplerV2
+from qiskit_ibm_runtime import QiskitRuntimeService
 from qiskit.primitives import BackendSampler
+import time
+import traceback
+
 
 def decode_solution(result, n_cities):
     """
@@ -17,23 +18,33 @@ def decode_solution(result, n_cities):
     Now properly handles dictionary output from QAOA.
     """
     try:
-        
-        if hasattr(result, 'eigenstate'):
-            print(f"Eigenstate type: {type(result.eigenstate)}")
-
         # Get the state with highest probability from the counts dictionary
-        if hasattr(result, 'eigenstate') and isinstance(result.eigenstate, dict):
-            # Handle dictionary of counts
-            counts = result.eigenstate
-            max_probability_state = max(counts.items(), key=lambda x: x[1])[0]
-            print("MAX PROBABILITY STATE: ", max_probability_state)
-            print("MAX PROBABILITY VALUE: ", counts.get(max_probability_state))
-            binary = format(max_probability_state, f'0{n_cities * n_cities}b')
-        else:
-            # Fallback: create a simple sequential path
-            print("Warning: Could not decode quantum state, using fallback path")
-            path = list(range(n_cities)) + [0]
-            return path
+        if hasattr(result, 'eigenstate'):
+            eigenstate = result.eigenstate
+            print(f"Eigenstate type: {type(eigenstate)}")
+
+            if isinstance(eigenstate, QuasiDistribution):
+                # Handle dictionary of counts
+                max_probability_state = max(eigenstate.items(), key=lambda x: x[1])[0]
+                print("MAX PROBABILITY STATE: ", max_probability_state)
+                print("MAX PROBABILITY VALUE: ", eigenstate.get(max_probability_state))
+                binary = format(max_probability_state, f'0{n_cities * n_cities}b')
+            elif isinstance(eigenstate, dict):
+                # Handle dictionary of counts (e.g., COBYLA)
+                max_bitstring = max(eigenstate.items(), key=lambda x: x[1])[0]
+                binary = format(int(max_bitstring, 2), f'0{n_cities * n_cities}b')
+            
+            elif isinstance(eigenstate, np.ndarray):
+                # Handle ndarray (e.g., SPSA)
+                # Find the index with the maximum amplitude
+                max_index = np.argmax(np.abs(eigenstate))
+                binary = format(max_index, f'0{n_cities * n_cities}b')
+            
+            else:
+                # Fallback for unrecognized types
+                print("Warning: Could not decode quantum state, using fallback path")
+                path = list(range(n_cities)) + [0]
+                return path
 
         # Convert to state matrix
         state_matrix = np.array(list(map(int, binary))).reshape(n_cities, n_cities)
@@ -65,6 +76,51 @@ def decode_solution(result, n_cities):
         # Return a simple sequential path as fallback
         return list(range(n_cities)) + [0]
 
+last_print_time = time.time()
+callback_interval = 0
+
+def optimizer_callback(evaluation, params, value, step_size=None, accepted=None):
+    """
+    General callback function for optimizers in Qiskit (e.g., SPSA, COBYLA).
+    Prints progress updates at a specified time interval (e.g., once every 1 minute).
+
+    Args:
+        evaluation (int): The current iteration number.
+        params (numpy.ndarray): The current parameters being evaluated. This argument
+            is kept for compatibility but is not printed.
+        value (float): The current value of the objective function.
+        step_size (float, optional): The step size used for the iteration (only applicable for SPSA).
+        accepted (bool, optional): Whether the step was accepted (only applicable for SPSA).
+        interval (int, optional): The minimum time interval (in seconds) between print statements.
+            Default is 60 seconds.
+
+    Prints:
+        A formatted string that includes the current timestamp, iteration number,
+        objective function value, step size (if applicable), and accepted status (if applicable).
+    """
+    global last_print_time
+    global callback_interval
+    
+    # Get the current time in seconds since the epoch
+    current_time = time.time()
+    
+    # Print only if the specified interval has passed since the last print
+    if current_time - last_print_time >= callback_interval:
+        timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(current_time))
+        
+        # Base message with evaluation and value
+        message = f"{timestamp} - Iteration: {evaluation}, Value: {value:.5f}"
+        
+        # Add step size and accepted status if provided (SPSA-specific)
+        if step_size is not None and accepted is not None:
+            message += f", Step Size: {step_size:.5f}, Accepted: {accepted}"
+        
+        # Print the message
+        print(message)
+        
+        # Update the last print time
+        last_print_time = current_time
+
 def create_cost_hamiltonian(distances):
     """
     Create the cost Hamiltonian for the QAOA.
@@ -87,7 +143,7 @@ def create_cost_hamiltonian(distances):
                     pauli_str[qubit1] = 'Z'
                     pauli_str[qubit2] = 'Z'
                     pauli = ''.join(pauli_str)
-                    pauliList.append((pauli, distances[i][j] / 4))
+                    pauliList.append((pauli, distances[i][j]))
 
     cost_ops.append(SparsePauliOp.from_list(pauliList))
 
@@ -126,7 +182,7 @@ def create_cost_hamiltonian(distances):
 
     return sum(cost_ops)
 
-def solve_tsp_with_qaoa(distances, cities, useSimulator=True, visualize=False):
+def solve_tsp_with_qaoa(distances, cities, useSimulator=True, visualize=False, saveGraph=True):
     """
     Solve TSP using QAOA on IBM Quantum hardware.
     """
@@ -137,14 +193,14 @@ def solve_tsp_with_qaoa(distances, cities, useSimulator=True, visualize=False):
     if visualize:
         # Show initial graph
         print("Visualizing Problem Graph:")
-        visualize_graph(distances, cities)
+        visualize_graph(distances, cities, save=saveGraph)
 
     # Create Hamiltonian
     cost_hamiltonian = create_cost_hamiltonian(distances)
 
     # Set up QAOA
     p = 3  # Number of QAOA layers (keep small for hardware constraints)
-    optimizer = COBYLA(maxiter=500)
+    optimizer = SPSA(maxiter=5, callback=optimizer_callback)
 
     if useSimulator:
         backend = QasmSimulator()
@@ -193,7 +249,7 @@ def solve_tsp_with_qaoa(distances, cities, useSimulator=True, visualize=False):
         if visualize:
             # Show solution graph
             print("\nVisualizing Optimal Path:")
-            visualize_graph(distances, cities, path)
+            visualize_graph(distances, cities, path, save=saveGraph)
 
         return path, total_distance
 

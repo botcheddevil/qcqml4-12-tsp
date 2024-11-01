@@ -1,3 +1,4 @@
+import argparse
 import time
 import numpy as np
 from qaoa_qiskit1_2 import solve_tsp_with_qaoa
@@ -59,15 +60,52 @@ def create_tsp_graph(n):
 
 
 if __name__ == "__main__":
-    # optimal_path, total_distance = solve_tsp_with_qaoa(create_tsp_graph_3nodes)
-    # optimal_path, total_distance = solve_tsp_with_qaoa(create_tsp_graph_4nodes)
-    # optimal_path, total_distance = solve_tsp_with_qaoa(create_tsp_graph_5nodes)
-    for n in range(3, 4):
-        start_time = time.time()
 
-        distances, cities = create_tsp_graph_3nodes()
-        solve_tsp_with_qaoa(distances, cities, visualize=False, useSimulator=False)
+    parser = argparse.ArgumentParser(description="Script to handle --sim flag and --n integer.")
+
+    # Define the --nodes argument as an integer
+    parser.add_argument("--nodes",
+        type=int,
+        help="The number of cities (an integer)",
+        default=3)
+
+    # Define the --save-graph flag as a boolean
+    parser.add_argument(
+        "--save-graph",
+        action="store_true",
+        help="Save the graph to a PNG file instead of displaying it",
+        default=False)
+
+    # Define the --real flag as a boolean
+    parser.add_argument(
+        "--real",
+        action="store_true",
+        help="Run on IBM's real QPU",
+        default=False)
+    
+    # Parse the arguments
+    args = parser.parse_args()
+    
+    # Set variables based on the command line arguments
+    numOfNodes = args.nodes
+    saveGraph = args.save_graph
+    useSimulator = not args.real
+    
+    print(f"Save Graph: {saveGraph}")
+    print(f"Use Simulator: {useSimulator}")
+
+    for n in range(3,numOfNodes+1):
+        start_time = time.time()
+        match numOfNodes:
+            case 3: distances, cities = create_tsp_graph_3nodes()
+            case 4: distances, cities = create_tsp_graph_4nodes()
+            case 5: distances, cities = create_tsp_graph_5nodes()
+            case _: distances, cities = create_tsp_graph(numOfNodes)
+        
+        solve_tsp_with_qaoa(distances, cities, visualize=saveGraph, useSimulator=useSimulator, saveGraph=saveGraph)
 
         end_time = time.time()
         runtime_duration = end_time - start_time
-        print(f"Script ran for: {runtime_duration // 60:.2f} minutes")
+        minutes = runtime_duration // 60
+        seconds = runtime_duration % 60
+        print(f"Script ran for: {minutes} minutes {seconds} seconds")
