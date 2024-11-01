@@ -1,2 +1,5 @@
 .history
 __pycache__
+ibm_token.py
+*.png
+graphs/
