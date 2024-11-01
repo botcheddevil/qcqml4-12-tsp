@@ -1,6 +1,5 @@
 numpy==1.24.3
 qiskit==1.2.4
-qiskit-terra==0.46.3
 qiskit-aer==0.15.0
 qiskit-ibm-runtime==0.32.0
 qiskit-algorithms==0.3.1

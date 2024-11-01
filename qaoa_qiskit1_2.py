@@ -1,14 +1,15 @@
+import traceback
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
+from graph import visualize_graph
 from itertools import combinations
 from qiskit_aer import QasmSimulator
-from qiskit.algorithms import QAOA
-from qiskit.algorithms.optimizers import COBYLA
-from qiskit.primitives import Sampler
-from qiskit.opflow import PauliOp
-from qiskit.quantum_info import Pauli
-from qiskit_ibm_runtime import QiskitRuntimeService
+from qiskit_algorithms.minimum_eigensolvers.qaoa import QAOA
+from qiskit_algorithms.optimizers import COBYLA
+from qiskit.quantum_info import SparsePauliOp
+from qiskit_ibm_runtime import QiskitRuntimeService, SamplerV2
+from qiskit.primitives import BackendSampler
 
 def decode_solution(result, n_cities):
     """
@@ -16,12 +17,18 @@ def decode_solution(result, n_cities):
     Now properly handles dictionary output from QAOA.
     """
     try:
+        
+        if hasattr(result, 'eigenstate'):
+            print(f"Eigenstate type: {type(result.eigenstate)}")
+
         # Get the state with highest probability from the counts dictionary
         if hasattr(result, 'eigenstate') and isinstance(result.eigenstate, dict):
             # Handle dictionary of counts
             counts = result.eigenstate
-            max_bitstring = max(counts.items(), key=lambda x: x[1])[0]
-            binary = format(int(max_bitstring, 2), f'0{n_cities * n_cities}b')
+            max_probability_state = max(counts.items(), key=lambda x: x[1])[0]
+            print("MAX PROBABILITY STATE: ", max_probability_state)
+            print("MAX PROBABILITY VALUE: ", counts.get(max_probability_state))
+            binary = format(max_probability_state, f'0{n_cities * n_cities}b')
         else:
             # Fallback: create a simple sequential path
             print("Warning: Could not decode quantum state, using fallback path")
@@ -53,6 +60,7 @@ def decode_solution(result, n_cities):
 
     except Exception as e:
         print(f"Warning: Error in solution decoding: {e}")
+        traceback.print_exc()
         print("Using fallback path")
         # Return a simple sequential path as fallback
         return list(range(n_cities)) + [0]
@@ -66,6 +74,7 @@ def create_cost_hamiltonian(distances):
     cost_ops = []
 
     # Distance terms
+    pauliList = []
     for i in range(n_cities):
         for j in range(n_cities):
             if i != j:
@@ -77,14 +86,16 @@ def create_cost_hamiltonian(distances):
                     pauli_str = ['I'] * n_qubits
                     pauli_str[qubit1] = 'Z'
                     pauli_str[qubit2] = 'Z'
-                    pauli = Pauli(''.join(pauli_str))
+                    pauli = ''.join(pauli_str)
+                    pauliList.append((pauli, distances[i][j] / 4))
 
-                    cost_ops.append(PauliOp(pauli, distances[i][j] / 4))
+    cost_ops.append(SparsePauliOp.from_list(pauliList))
 
-    # Add strong penalty terms
+    # Add sufficiently strong penalty terms
     penalty = 20.0
 
     # One city per time step
+    pauliList = []
     for t in range(n_cities):
         for i, j in combinations(range(n_cities), 2):
             qubit1 = i * n_cities + t
@@ -93,11 +104,13 @@ def create_cost_hamiltonian(distances):
             pauli_str = ['I'] * n_qubits
             pauli_str[qubit1] = 'Z'
             pauli_str[qubit2] = 'Z'
-            pauli = Pauli(''.join(pauli_str))
+            pauli = ''.join(pauli_str)
+            pauliList.append((pauli, penalty))
 
-            cost_ops.append(PauliOp(pauli, penalty))
+    cost_ops.append(SparsePauliOp.from_list(pauliList,))
 
     # Each city visited once
+    pauliList = []
     for i in range(n_cities):
         for t1, t2 in combinations(range(n_cities), 2):
             qubit1 = i * n_cities + t1
@@ -106,9 +119,10 @@ def create_cost_hamiltonian(distances):
             pauli_str = ['I'] * n_qubits
             pauli_str[qubit1] = 'Z'
             pauli_str[qubit2] = 'Z'
-            pauli = Pauli(''.join(pauli_str))
+            pauli = ''.join(pauli_str)
+            pauliList.append((pauli, penalty))
 
-            cost_ops.append(PauliOp(pauli, penalty))
+    cost_ops.append(SparsePauliOp.from_list(pauliList))
 
     return sum(cost_ops)
 
@@ -122,7 +136,7 @@ def solve_tsp_with_qaoa(distances, cities, useSimulator=True, visualize=False):
     print(f"Solving TSP for {n_cities} cities:\n", cities, "\nDistance Matrix:\n", distances)
     if visualize:
         # Show initial graph
-        print("Visualizing TSP Graph:")
+        print("Visualizing Problem Graph:")
         visualize_graph(distances, cities)
 
     # Create Hamiltonian
@@ -147,9 +161,10 @@ def solve_tsp_with_qaoa(distances, cities, useSimulator=True, visualize=False):
         
         print("Running on current least busy backend:", backend)
 
+    sampler = BackendSampler(backend)
     qaoa = QAOA(
+        sampler=sampler,
         optimizer=optimizer,
-        quantum_instance=backend,
         reps=p,
         initial_point=[np.pi/3] * (2*p)
     )
@@ -161,9 +176,6 @@ def solve_tsp_with_qaoa(distances, cities, useSimulator=True, visualize=False):
         # Debug information
         print("\nQAOA Result Details:")
         print(f"Result type: {type(result)}")
-        print(f"Available attributes: {dir(result)}")
-        if hasattr(result, 'eigenstate'):
-            print(f"Eigenstate type: {type(result.eigenstate)}")
 
         # Decode solution
         path_indices = decode_solution(result, n_cities)
@@ -187,82 +199,8 @@ def solve_tsp_with_qaoa(distances, cities, useSimulator=True, visualize=False):
 
     except Exception as e:
         print(f"Error in QAOA execution: {e}")
+        traceback.print_stack()
         # Return a simple sequential path as fallback
         path = list(range(n_cities)) + [0]
         path = [cities[i] for i in path]
         return path, float('inf')
-
-def visualize_graph(distances, cities, path=None):
-    """
-    Visualize TSP graph with path highlighting.
-    """
-    plt.figure(figsize=(10, 8))
-
-    G = nx.Graph()
-    for i in range(len(cities)):
-        for j in range(i + 1, len(cities)):
-            G.add_edge(cities[i], cities[j], weight=distances[i][j])
-
-    pos = nx.circular_layout(G)
-
-    # Draw all edges in light gray
-    nx.draw_networkx_edges(G, pos,
-                         edge_color='lightgray',
-                         width=1,
-                         style='dashed')
-
-    # Draw edge labels
-    edge_labels = nx.get_edge_attributes(G, 'weight')
-    nx.draw_networkx_edge_labels(G, pos,
-                               edge_labels=edge_labels,
-                               font_size=10)
-
-    if path is not None:
-        # Draw solution path with arrows
-        path_edges = list(zip(path[:-1], path))
-        for start, end in path_edges:
-            start_pos = pos[start]
-            end_pos = pos[end]
-
-            plt.arrow(start_pos[0], start_pos[1],
-                     end_pos[0] - start_pos[0],
-                     end_pos[1] - start_pos[1],
-                     head_width=0.03,
-                     head_length=0.05,
-                     fc='red',
-                     ec='red',
-                     length_includes_head=True,
-                     width=0.002)
-
-    # Draw nodes
-    nx.draw_networkx_nodes(G, pos,
-                         node_color='lightblue',
-                         node_size=1000,
-                         edgecolors='black',
-                         linewidths=2)
-
-    nx.draw_networkx_labels(G, pos,
-                          font_size=14,
-                          font_weight='bold')
-
-    if path is None:
-        plt.title("Initial TSP Graph")
-    else:
-        total_distance = sum(distances[cities.index(path[i])][cities.index(path[i+1])]
-                           for i in range(len(path)-1))
-        plt.title(f"TSP Solution Path\nPath: {' → '.join(path)}\nTotal Distance: {total_distance}")
-
-    plt.axis('off')
-
-    # Add legend
-    if path is not None:
-        legend_elements = [
-            plt.Line2D([0], [0], color='lightgray', linestyle='--',
-                      label='Available Paths'),
-            plt.Line2D([0], [0], color='red', label='Solution Path')
-        ]
-        plt.legend(handles=legend_elements, loc='lower center',
-                  bbox_to_anchor=(0.5, -0.15))
-
-    plt.tight_layout()
-    plt.show()

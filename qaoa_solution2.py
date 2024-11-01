@@ -3,10 +3,9 @@ import networkx as nx
 import matplotlib.pyplot as plt
 from itertools import combinations
 from qiskit_aer import QasmSimulator
-from qiskit.algorithms import QAOA
+# from qiskit.algorithms import QAOA
 from qiskit.algorithms.optimizers import COBYLA
 from qiskit.primitives import Sampler
-from qiskit.opflow import PauliOp
 from qiskit.quantum_info import Pauli
 from qiskit_ibm_runtime import QiskitRuntimeService
 
@@ -160,10 +159,7 @@ def solve_tsp_with_qaoa(distances, cities, useSimulator=True, visualize=False):
 
         # Debug information
         print("\nQAOA Result Details:")
-        print(f"Result type: {type(result)}")
-        print(f"Available attributes: {dir(result)}")
-        if hasattr(result, 'eigenstate'):
-            print(f"Eigenstate type: {type(result.eigenstate)}")
+        print(f"Available attributes: {dir(result.eigenstate)}")
 
         # Decode solution
         path_indices = decode_solution(result, n_cities)
