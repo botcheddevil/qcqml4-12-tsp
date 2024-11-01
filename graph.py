@@ -1,5 +1,6 @@
 import networkx as nx
 import matplotlib.pyplot as plt
+import os
 
 from datetime import datetime
 from matplotlib.patches import FancyArrowPatch
@@ -79,6 +80,7 @@ def visualize_graph(distances, cities, path=None, save=False):
     if save:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         savefig_name = f"qaoa_{len(cities)}_nodes_{timestamp}.png"
+        savefig_name = os.path.join("graphs", savefig_name)
         plt.savefig(savefig_name, format="png")
         plt.close()
     else:
