@@ -1,10 +1,11 @@
 import networkx as nx
 import matplotlib.pyplot as plt
 
+from datetime import datetime
 from matplotlib.patches import FancyArrowPatch
 from matplotlib.pyplot import gca
 
-def visualize_graph(distances, cities, path=None):
+def visualize_graph(distances, cities, path=None, save=False):
     """
     Visualize TSP graph with path highlighting.
     """
@@ -75,4 +76,10 @@ def visualize_graph(distances, cities, path=None):
                    bbox_to_anchor=(0.5, -0.15))
     
     plt.tight_layout()
-    plt.show()
+    if save:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        savefig_name = f"qaoa_{len(cities)}_nodes_{timestamp}.png"
+        plt.savefig(savefig_name, format="png")
+        plt.close()
+    else:
+        plt.show()
