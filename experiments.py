@@ -1,6 +1,4 @@
 from tsp_problems import run_experiment
-debug = False
-
 
 if __name__ == "__main__":
     for maxiter in range(1, 10):

@@ -2,6 +2,7 @@ import argparse
 import sys
 import time
 import numpy as np
+from graph import visualize_graph
 from qaoa_qiskit1_2 import solve_tsp_with_qaoa
 
 def create_tsp_graph_3nodes():
@@ -63,23 +64,38 @@ def create_tsp_graph(n):
 def run_experiment(
         num_of_nodes:int,
         optimizer_choice:str,
-        optimizer_maxiter:int=3):
+        optimizer_maxiter:int=3,
+        use_simulator=True,
+        save_graph=False):
+    print("\n============================================\n")
     print(f"Running Experiment with: Cities={num_of_nodes}, Optimizer={optimizer_choice}, Maxiter={optimizer_maxiter}")
 
     start_time = time.time()
+    # Create problem definition
     match num_of_nodes:
         case 3: distances, cities = create_tsp_graph_3nodes()
         case 4: distances, cities = create_tsp_graph_4nodes()
         case 5: distances, cities = create_tsp_graph_5nodes()
         case _: distances, cities = create_tsp_graph(num_of_nodes)
-    
-    solve_tsp_with_qaoa(distances, cities,
+
+    print(f"Solving TSP for {len(cities)} cities:\n", cities, "\nDistance Matrix:\n", distances)
+
+    if save_graph:
+        # Show initial graph
+        print("Visualizing Problem Graph:")
+        visualize_graph(distances, cities, save=True)
+
+    optimalPath, err = solve_tsp_with_qaoa(distances, cities,
         optimizer_choice=optimizer_choice,
         optimizer_maxiter=optimizer_maxiter,
-        visualize=False,
-        use_simulator=True,
-        save_graph=False,
+        use_simulator=use_simulator
         )
+    
+    if not err:
+        if save_graph:
+            # Show solution graph
+            print("\nVisualizing Optimal Path:")
+            visualize_graph(distances, cities, optimalPath, save=True)
 
     end_time = time.time()
     runtime_duration = end_time - start_time

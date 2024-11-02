@@ -1,4 +1,4 @@
-from graph import visualize_graph
+import sys
 from itertools import combinations
 import numpy as np
 from qiskit.result.distributions.quasi import QuasiDistribution
@@ -11,24 +11,30 @@ from qiskit.primitives import BackendSampler
 import time
 import traceback
 
-
-def debug_result_info(result):
+def debug_result_info(result, verbose=False):
     """
     Print debug information about the QAOA result.
     """
-    print(f"\nQAOA Debug Result:")
-    print(f"Result type: {type(result)}")
-    # print(f"Available attributes: {dir(result)}")
+    print("QAOA Debug Result:")
+    if verbose:
+        print(f"Result type: {type(result)}")
     
     if hasattr(result, 'eigenstate'):
         eigenstate = result.eigenstate
-        print(f"Eigenstate type: {type(eigenstate)}")
+        if verbose:
+            print(f"Eigenstate type: {type(eigenstate)}")
         
-        if isinstance(eigenstate, dict):
-            max_state = max(eigenstate, key=eigenstate.get)
-            print(f"Most probable state (dict): {max_state} with probability {eigenstate[max_state]}")
+        if isinstance(eigenstate, QuasiDistribution):
+            print(f"Eigenstate (QuasiDistribution):")
+            items = list(eigenstate.binary_probabilities())
+            print(items if verbose else f"{items[:5]} ... (truncated for display)")
+        elif isinstance(eigenstate, dict):
+            print(f"Eigenstate (dict):")
+            items = list(eigenstate.items())
+            print(items if verbose else f"{items[:5]} ... (truncated for display)")
         elif isinstance(eigenstate, np.ndarray):
-            print(f"Eigenstate (ndarray): {eigenstate[:5]}... (truncated for display)")
+            print("Eigenstate (ndarray):")
+            print(eigenstate if verbose else f"{eigenstate[:5]} ... (truncated for display)")
         else:
             print("Warning: Eigenstate format not recognized.")
 
@@ -37,67 +43,90 @@ def decode_solution(result, n_cities):
     Decode the QAOA result into a valid TSP path.
     Now properly handles dictionary output from QAOA.
     """
+    # Get the state with highest probability from the counts dictionary
+    if not hasattr(result, 'eigenstate'):
+        raise Exception("Cannot Decode: The 'eigenstate' attribute is missing in 'result'")
+
+    eigenstate = result.eigenstate
+
+    if isinstance(eigenstate, QuasiDistribution):
+        # Handle dictionary of counts
+        max_probability_key = max(eigenstate.items(), key=lambda x: x[1])[0]
+        binary = max_probability_key
+    elif isinstance(eigenstate, dict):
+        # Handle dictionary of counts (e.g., COBYLA)
+        max_probability_key = max(eigenstate.items(), key=lambda x: x[1])[0]
+        binary = format(int(max_probability_key, 2), f'0{n_cities * n_cities}b')
+    
+    elif isinstance(eigenstate, np.ndarray):
+        # Handle ndarray (e.g., SPSA)
+        # Find the index with the maximum amplitude
+        max_probability_key = np.argmax(np.abs(eigenstate))
+        binary = format(max_probability_key, f'0{n_cities * n_cities}b')
+    
+    else:
+        # Error for unrecognized types
+        raise Exception(f"Could not decode quantum state from result type: {type(eigenstate)}")
+
+    print("MAX PROBABILITY STATE: ", binary)
+    print("MAX PROBABILITY VALUE: ", eigenstate.get(max_probability_key))
+
+    # Convert to state matrix
+    state_matrix = np.array(list(map(int, binary))).reshape(n_cities, n_cities)
+
+    # Build valid path
+    path = []
+    used_cities = set()
+
+    for t in range(n_cities):
+        probs = state_matrix[:, t]
+        available = [i for i in range(n_cities) if i not in used_cities]
+
+        if not available:
+            remaining = list(set(range(n_cities)) - set(path))
+            city = remaining[0] if remaining else path[0]
+        else:
+            city = max(available, key=lambda x: probs[x])
+
+        path.append(city)
+        used_cities.add(city)
+
+    path.append(path[0])  # Complete the cycle
+    return path
+
+def decode_and_print_solution(result, distances, cities):
+    """
+    Decode the solution, calculate the total distance, and print the results,
+    including the distance between each step in the path.
+    """
     try:
-        # Get the state with highest probability from the counts dictionary
-        if hasattr(result, 'eigenstate'):
-            eigenstate = result.eigenstate
-            print(f"Eigenstate type: {type(eigenstate)}")
+        path_indices = decode_solution(result, len(cities))
+        path = [cities[i] for i in path_indices]
 
-            if isinstance(eigenstate, QuasiDistribution):
-                # Handle dictionary of counts
-                max_probability_state = max(eigenstate.items(), key=lambda x: x[1])[0]
-                print("MAX PROBABILITY STATE: ", max_probability_state)
-                print("MAX PROBABILITY VALUE: ", eigenstate.get(max_probability_state))
-                binary = format(max_probability_state, f'0{n_cities * n_cities}b')
-            elif isinstance(eigenstate, dict):
-                # Handle dictionary of counts (e.g., COBYLA)
-                max_bitstring = max(eigenstate.items(), key=lambda x: x[1])[0]
-                binary = format(int(max_bitstring, 2), f'0{n_cities * n_cities}b')
-            
-            elif isinstance(eigenstate, np.ndarray):
-                # Handle ndarray (e.g., SPSA)
-                # Find the index with the maximum amplitude
-                max_index = np.argmax(np.abs(eigenstate))
-                binary = format(max_index, f'0{n_cities * n_cities}b')
-            
-            else:
-                # Fallback for unrecognized types
-                print("Warning: Could not decode quantum state, using fallback path")
-                path = list(range(n_cities)) + [0]
-                return path
-
-        # Convert to state matrix
-        state_matrix = np.array(list(map(int, binary))).reshape(n_cities, n_cities)
-
-        # Build valid path
-        path = []
-        used_cities = set()
-
-        for t in range(n_cities):
-            probs = state_matrix[:, t]
-            available = [i for i in range(n_cities) if i not in used_cities]
-
-            if not available:
-                remaining = list(set(range(n_cities)) - set(path))
-                city = remaining[0] if remaining else path[0]
-            else:
-                city = max(available, key=lambda x: probs[x])
-
-            path.append(city)
-            used_cities.add(city)
-
-        path.append(path[0])  # Complete the cycle
+        # Calculate total distance and print distances between each step
+        total_distance = 0
+        print(f"\nOptimal path: {' -> '.join(path)}")
+        print("Distances between steps:")
+        
+        for i in range(len(path_indices) - 1):
+            start = path_indices[i]
+            end = path_indices[i + 1]
+            step_distance = distances[start][end]
+            total_distance += step_distance
+            print(f"{cities[start]} -> {cities[end]}: {step_distance:.1f}")
+        
+        # Print the total distance
+        print(f"\nTotal distance: {total_distance:.1f}")
         return path
 
-    except Exception as e:
-        print(f"Warning: Error in solution decoding: {e}")
+    except Exception as ex:
+        print(f"Error decoding solution: {ex}")
         traceback.print_exc()
-        print("Using fallback path")
-        # Return a simple sequential path as fallback
-        return list(range(n_cities)) + [0]
+        return None
+
 
 last_print_time = time.time()
-callback_interval = 60
+callback_interval = 30
 
 def cobyla_callback(evaluation, *args):
     """
@@ -220,28 +249,16 @@ def create_cost_hamiltonian(distances):
 
 def solve_tsp_with_qaoa(distances, cities, 
                         optimizer_choice:str='spsa',
-                        use_simulator:bool=True,
-                        visualize:bool=False,
-                        save_graph:bool=True,
-                        optimizer_maxiter:int=10):
+                        optimizer_maxiter:int=10,
+                        use_simulator:bool=True):
     """
     Solve TSP using QAOA on IBM Quantum hardware.
     """
-    # Create problem instance
-    n_cities = len(distances)
-
-    print(f"Solving TSP for {n_cities} cities:\n", cities, "\nDistance Matrix:\n", distances)
-    if visualize:
-        # Show initial graph
-        print("Visualizing Problem Graph:")
-        visualize_graph(distances, cities, save=save_graph)
-
     # Create Hamiltonian
     cost_hamiltonian = create_cost_hamiltonian(distances)
 
     # Set up QAOA
     p = 3  # Number of QAOA layers (keep small for hardware constraints)
-    optimizer_maxiter = 3 # Limit the number of iterations to see effect on accuracy
 
     if optimizer_choice == 'spsa':
         optimizer = SPSA(maxiter=optimizer_maxiter, callback=spsa_callback)
@@ -257,7 +274,7 @@ def solve_tsp_with_qaoa(distances, cities,
         # Load IBMQ account and select backend
         service = QiskitRuntimeService(channel="ibm_quantum")
         # Get the least busy backend with enough qubits
-        backend = service.least_busy(operational=True, simulator=False, min_num_qubits=16)
+        backend = service.least_busy(operational=True, simulator=False, min_num_qubits=50)
         if not backend:
             raise Exception("No available backends with enough qubits.")
         
@@ -272,36 +289,20 @@ def solve_tsp_with_qaoa(distances, cities,
     )
 
     # Run QAOA
+    print(f"Running {p} layer QAOA optimizer={type(optimizer).__name__} maxiter={optimizer_maxiter}")
     try:
         result = qaoa.compute_minimum_eigenvalue(cost_hamiltonian)
 
-        # Print debug information
+        # Print details of result to help debugging issues
         debug_result_info(result)
 
-        # Decode solution
-        path_indices = decode_solution(result, n_cities)
-        path = [cities[i] for i in path_indices]
+        print("QAOA Results:")
+        # Decode and print the solution
+        path = decode_and_print_solution(result, distances, cities)
 
-        # Calculate total distance
-        total_distance = sum(distances[path_indices[i]][path_indices[i+1]]
-                           for i in range(len(path_indices)-1))
-
-        # Print results
-        print(f"\nQAOA Results:")
-        print(f"Optimal path: {' -> '.join(path)}")
-        print(f"Total distance: {total_distance}")
-
-        if visualize:
-            # Show solution graph
-            print("\nVisualizing Optimal Path:")
-            visualize_graph(distances, cities, path, save=save_graph)
-
-        return path, total_distance
+        return path, 0
 
     except Exception as e:
         print(f"Error in QAOA execution: {e}")
-        traceback.print_stack()
-        # Return a simple sequential path as fallback
-        path = list(range(n_cities)) + [0]
-        path = [cities[i] for i in path]
-        return path, float('inf')
+        traceback.print_exc()
+        return None, 1
