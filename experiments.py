@@ -3,6 +3,7 @@ from tsp_problems import run_experiment
 
 
 if __name__ == "__main__":
-    for maxiter in range(1, 3):
-        run_experiment(4, optimizer_choice='cobyla', optimizer_maxiter=maxiter, use_simulator=True, save_graph=True)
-        run_experiment(4, optimizer_choice='spsa', optimizer_maxiter=maxiter, use_simulator=True, save_graph=True)
+    for nodes in range(4, 8):
+        for maxiter in range(1, 4):
+            run_experiment(nodes, optimizer_choice='cobyla', optimizer_maxiter=maxiter, use_simulator=True, save_graph=True)
+            run_experiment(nodes, optimizer_choice='spsa', optimizer_maxiter=maxiter, use_simulator=True, save_graph=True)

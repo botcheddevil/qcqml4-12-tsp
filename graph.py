@@ -6,7 +6,7 @@ from datetime import datetime
 from matplotlib.patches import FancyArrowPatch
 from matplotlib.pyplot import gca
 
-def visualize_graph(distances, cities, path=None, save=False):
+def visualize_graph(distances, cities, path=None, save=False,save_prefix=''):
     """
     Visualize TSP graph with path highlighting.
     """
@@ -79,7 +79,7 @@ def visualize_graph(distances, cities, path=None, save=False):
     plt.tight_layout()
     if save:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        savefig_name = f"qaoa_{len(cities)}_nodes_{timestamp}.png"
+        savefig_name = f"{save_prefix}qaoa_{len(cities)}_nodes_{timestamp}.png"
         savefig_name = os.path.join("graphs", savefig_name)
         plt.savefig(savefig_name, format="png")
     else:

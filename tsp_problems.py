@@ -81,26 +81,19 @@ def run_experiment(
 
     print(f"Solving TSP for {len(cities)} cities:\n", cities, "\nDistance Matrix:\n", distances)
 
-    if save_graph:
-        # Show initial graph
-        print("Visualizing Problem Graph:")
-        try:
-            visualize_graph(distances, cities, save=True)
-        except Exception as ex:
-            print(f"Error in visualize_graph: {ex}")
-            traceback.print_exc()
-
     optimalPath, err = solve_tsp_with_qaoa(distances, cities,
         optimizer_choice=optimizer_choice,
         optimizer_maxiter=optimizer_maxiter,
         use_simulator=use_simulator
         )
+    run_mode = 'SIM' if use_simulator else 'QPU'
+    save_prefix = f'{run_mode}_{optimizer_choice}-{optimizer_maxiter}_'
     
     if not err and save_graph:
         # Generate solution graph
         print("\nVisualizing Optimal Path:")
         try:
-            visualize_graph(distances, cities, optimalPath, save=True)
+            visualize_graph(distances, cities, optimalPath, save=True, save_prefix=save_prefix)
         except Exception as ex:
             print(f"Error in visualize_graph: {ex}")
             traceback.print_exc()
