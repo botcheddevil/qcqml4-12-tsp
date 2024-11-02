@@ -29,4 +29,4 @@
      - `$ python tsp_problems.py --help`
 
    - **Run a batch of QAQO experiments**
-     - `$ python experiments.py` Attempts on 4 to 7 nodes, testing optimizers COBYLA and SPSA with maxiter 1 to 3
+     - `$ python experiments.py` Attempts on 5 to 7 nodes, testing optimizers COBYLA and SPSA with maxiter 1 and 2
