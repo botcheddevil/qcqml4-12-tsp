@@ -1,6 +1,7 @@
 import argparse
 import sys
 import time
+import traceback
 import numpy as np
 from graph import visualize_graph
 from qaoa_qiskit1_2 import solve_tsp_with_qaoa
@@ -84,9 +85,10 @@ def run_experiment(
         # Show initial graph
         print("Visualizing Problem Graph:")
         try:
-            visualize_graph(distances, cities, save=True)
-        except Exception ex:
-            
+            visualize_graph(distances, cities, save=False)
+        except Exception as ex:
+            print(f"Error in visualize_graph: {ex}")
+            traceback.print_exc()
 
     optimalPath, err = solve_tsp_with_qaoa(distances, cities,
         optimizer_choice=optimizer_choice,
@@ -94,11 +96,14 @@ def run_experiment(
         use_simulator=use_simulator
         )
     
-    if not err:
-        if save_graph:
-            # Show solution graph
-            print("\nVisualizing Optimal Path:")
-            visualize_graph(distances, cities, optimalPath, save=True)
+    if not err and save_graph:
+        # Generate solution graph
+        print("\nVisualizing Optimal Path:")
+        try:
+            visualize_graph(distances, cities, optimalPath, save=False)
+        except Exception as ex:
+            print(f"Error in visualize_graph: {ex}")
+            traceback.print_exc()
 
     end_time = time.time()
     runtime_duration = end_time - start_time
