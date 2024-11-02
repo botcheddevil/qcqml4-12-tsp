@@ -4,13 +4,33 @@ import numpy as np
 from qiskit.result.distributions.quasi import QuasiDistribution
 from qiskit_aer import QasmSimulator
 from qiskit_algorithms.minimum_eigensolvers.qaoa import QAOA
-from qiskit_algorithms.optimizers import SPSA
+from qiskit_algorithms.optimizers import SPSA, COBYLA
 from qiskit.quantum_info import SparsePauliOp
 from qiskit_ibm_runtime import QiskitRuntimeService
 from qiskit.primitives import BackendSampler
 import time
 import traceback
 
+
+def debug_result_info(result):
+    """
+    Print debug information about the QAOA result.
+    """
+    print(f"\nQAOA Debug Result:")
+    print(f"Result type: {type(result)}")
+    # print(f"Available attributes: {dir(result)}")
+    
+    if hasattr(result, 'eigenstate'):
+        eigenstate = result.eigenstate
+        print(f"Eigenstate type: {type(eigenstate)}")
+        
+        if isinstance(eigenstate, dict):
+            max_state = max(eigenstate, key=eigenstate.get)
+            print(f"Most probable state (dict): {max_state} with probability {eigenstate[max_state]}")
+        elif isinstance(eigenstate, np.ndarray):
+            print(f"Eigenstate (ndarray): {eigenstate[:5]}... (truncated for display)")
+        else:
+            print("Warning: Eigenstate format not recognized.")
 
 def decode_solution(result, n_cities):
     """
@@ -77,48 +97,64 @@ def decode_solution(result, n_cities):
         return list(range(n_cities)) + [0]
 
 last_print_time = time.time()
-callback_interval = 0
+callback_interval = 60
 
-def optimizer_callback(evaluation, params, value, step_size=None, accepted=None):
+def cobyla_callback(evaluation, *args):
     """
-    General callback function for optimizers in Qiskit (e.g., SPSA, COBYLA).
-    Prints progress updates at a specified time interval (e.g., once every 1 minute).
+    Callback function for the COBYLA optimizer in Qiskit.
+    Prints progress updates at a specified time interval (e.g., once every 30 seconds).
 
     Args:
         evaluation (int): The current iteration number.
-        params (numpy.ndarray): The current parameters being evaluated. This argument
-            is kept for compatibility but is not printed.
-        value (float): The current value of the objective function.
-        step_size (float, optional): The step size used for the iteration (only applicable for SPSA).
-        accepted (bool, optional): Whether the step was accepted (only applicable for SPSA).
-        interval (int, optional): The minimum time interval (in seconds) between print statements.
-            Default is 60 seconds.
 
     Prints:
-        A formatted string that includes the current timestamp, iteration number,
-        objective function value, step size (if applicable), and accepted status (if applicable).
+        A formatted string that includes the current timestamp and iteration number.
     """
     global last_print_time
     global callback_interval
-    
+
     # Get the current time in seconds since the epoch
     current_time = time.time()
     
     # Print only if the specified interval has passed since the last print
     if current_time - last_print_time >= callback_interval:
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(current_time))
-        
-        # Base message with evaluation and value
-        message = f"{timestamp} - Iteration: {evaluation}, Value: {value:.5f}"
-        
-        # Add step size and accepted status if provided (SPSA-specific)
-        if step_size is not None and accepted is not None:
-            message += f", Step Size: {step_size:.5f}, Accepted: {accepted}"
+        message = f"{timestamp} - Iteration {evaluation}"
         
         # Print the message
         print(message)
         
         # Update the last print time
+        last_print_time = current_time
+
+
+def spsa_callback(evaluation, params, value, step_size=None, accepted=None):
+    """
+    Callback function for the SPSA optimizer in Qiskit.
+    Prints progress updates at a specified time interval (e.g., once every 30 seconds).
+
+    Args:
+        evaluation (int): The current iteration number.
+        params (numpy.ndarray): The current parameters being evaluated.
+        value (float): The current value of the objective function.
+        step_size (float, optional): The step size used for the iteration.
+        accepted (bool, optional): Whether the step was accepted.
+
+    Prints:
+        A formatted string that includes the current timestamp, iteration number,
+        objective function value, step size, and accepted status.
+    """
+    global last_print_time
+    global callback_interval
+
+    # Get the current time in seconds since the epoch
+    current_time = time.time()
+    
+    current_time = time.time()
+    if current_time - last_print_time >= callback_interval:
+        timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(current_time))
+        message = f"{timestamp} - Iteration {evaluation}: Value {value:.5f}, Step Size {step_size:.5f}, Accepted: {accepted}"
+        print(message)
         last_print_time = current_time
 
 def create_cost_hamiltonian(distances):
@@ -182,7 +218,12 @@ def create_cost_hamiltonian(distances):
 
     return sum(cost_ops)
 
-def solve_tsp_with_qaoa(distances, cities, useSimulator=True, visualize=False, saveGraph=True):
+def solve_tsp_with_qaoa(distances, cities, 
+                        optimizer_choice:str='spsa',
+                        use_simulator:bool=True,
+                        visualize:bool=False,
+                        save_graph:bool=True,
+                        optimizer_maxiter:int=10):
     """
     Solve TSP using QAOA on IBM Quantum hardware.
     """
@@ -193,16 +234,21 @@ def solve_tsp_with_qaoa(distances, cities, useSimulator=True, visualize=False, s
     if visualize:
         # Show initial graph
         print("Visualizing Problem Graph:")
-        visualize_graph(distances, cities, save=saveGraph)
+        visualize_graph(distances, cities, save=save_graph)
 
     # Create Hamiltonian
     cost_hamiltonian = create_cost_hamiltonian(distances)
 
     # Set up QAOA
     p = 3  # Number of QAOA layers (keep small for hardware constraints)
-    optimizer = SPSA(maxiter=5, callback=optimizer_callback)
+    optimizer_maxiter = 3 # Limit the number of iterations to see effect on accuracy
 
-    if useSimulator:
+    if optimizer_choice == 'spsa':
+        optimizer = SPSA(maxiter=optimizer_maxiter, callback=spsa_callback)
+    elif optimizer_choice == 'cobyla':
+        optimizer = COBYLA(maxiter=optimizer_maxiter, callback=cobyla_callback)
+
+    if use_simulator:
         backend = QasmSimulator()
     else:
         # Save the IBM Quantum Experience Credentials only for first run and DO NOT COMMIT the Token in GIT repo!
@@ -229,9 +275,8 @@ def solve_tsp_with_qaoa(distances, cities, useSimulator=True, visualize=False, s
     try:
         result = qaoa.compute_minimum_eigenvalue(cost_hamiltonian)
 
-        # Debug information
-        print("\nQAOA Result Details:")
-        print(f"Result type: {type(result)}")
+        # Print debug information
+        debug_result_info(result)
 
         # Decode solution
         path_indices = decode_solution(result, n_cities)
@@ -249,7 +294,7 @@ def solve_tsp_with_qaoa(distances, cities, useSimulator=True, visualize=False, s
         if visualize:
             # Show solution graph
             print("\nVisualizing Optimal Path:")
-            visualize_graph(distances, cities, path, save=saveGraph)
+            visualize_graph(distances, cities, path, save=save_graph)
 
         return path, total_distance
 
