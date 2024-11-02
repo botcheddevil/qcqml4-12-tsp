@@ -82,6 +82,5 @@ def visualize_graph(distances, cities, path=None, save=False):
         savefig_name = f"qaoa_{len(cities)}_nodes_{timestamp}.png"
         savefig_name = os.path.join("graphs", savefig_name)
         plt.savefig(savefig_name, format="png")
-        plt.close()
     else:
         plt.show()

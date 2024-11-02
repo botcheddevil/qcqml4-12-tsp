@@ -85,7 +85,7 @@ def run_experiment(
         # Show initial graph
         print("Visualizing Problem Graph:")
         try:
-            visualize_graph(distances, cities, save=False)
+            visualize_graph(distances, cities, save=True)
         except Exception as ex:
             print(f"Error in visualize_graph: {ex}")
             traceback.print_exc()
@@ -100,7 +100,7 @@ def run_experiment(
         # Generate solution graph
         print("\nVisualizing Optimal Path:")
         try:
-            visualize_graph(distances, cities, optimalPath, save=False)
+            visualize_graph(distances, cities, optimalPath, save=True)
         except Exception as ex:
             print(f"Error in visualize_graph: {ex}")
             traceback.print_exc()
