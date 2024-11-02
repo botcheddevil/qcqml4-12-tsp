@@ -83,7 +83,10 @@ def run_experiment(
     if save_graph:
         # Show initial graph
         print("Visualizing Problem Graph:")
-        visualize_graph(distances, cities, save=True)
+        try:
+            visualize_graph(distances, cities, save=True)
+        except Exception ex:
+            
 
     optimalPath, err = solve_tsp_with_qaoa(distances, cities,
         optimizer_choice=optimizer_choice,
