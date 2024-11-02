@@ -112,7 +112,7 @@ if __name__ == "__main__":
     # Define the --nodes argument as an integer
     parser.add_argument("--nodes",
         type=int,
-        help="The number of cities (an integer)",
+        help="The number of cities(an integer > 2)",
         default=3)
 
     # Define the --save-graph flag as a boolean
@@ -132,6 +132,12 @@ if __name__ == "__main__":
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('--spsa', action='store_true', help="Use the SPSA optimizer", default=True)
     group.add_argument('--cobyla', action='store_true', help="Use the COBYLA optimizer")
+
+    # Define the --real flag as a boolean
+    parser.add_argument("--maxiter",
+        type=int,
+        help="Value for maxiter parameter passed to optimizers(an integer). This affects number of workloads created if running on IBM platform",
+        default=3)
     
     # Parse the arguments
     args = parser.parse_args()
@@ -140,6 +146,7 @@ if __name__ == "__main__":
     num_of_nodes = args.nodes
     save_graph = args.save_graph
     use_simulator = not args.real
+    optimizer_maxiter = args.maxiter
 
     # Extract the number of nodes (cities)
     try:
@@ -160,4 +167,4 @@ if __name__ == "__main__":
     print(f"Use Simulator: {use_simulator}")
     print(f"Optimizer: {optimizer_choice}")
 
-    run_experiment(3, optimizer_choice, 5, use_simulator, save_graph)
+    run_experiment(num_of_nodes, optimizer_choice, optimizer_maxiter, use_simulator=use_simulator, save_graph=save_graph)

@@ -25,5 +25,8 @@
      - `$ python qaoa-4nodes.py` for 4 nodes
      - `$ python qaoa-5nodes.py` for 5 nodes
 
+   - **View help for usage of tsp_problems.py**
+     - `$ python tsp_problems.py`
+
    - **Run a batch of QAQO experiments **
      - `$ python experiments.py` Attempts on 4 to 7 nodes, testing optimizers COBYLA and SPSA with maxiter 1 to 3
