@@ -107,7 +107,7 @@ def run_experiment(
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description="Script to handle --sim flag and --n integer.")
+    parser = argparse.ArgumentParser(description="Solve TSP using QAOA and optionally save the graph.")
 
     # Define the --nodes argument as an integer
     parser.add_argument("--nodes",
