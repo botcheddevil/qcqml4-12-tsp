@@ -15,7 +15,7 @@ def debug_result_info(result, verbose=False):
     """
     Print debug information about the QAOA result.
     """
-    print("QAOA Debug Result:")
+    print("\nQAOA Debug Result:")
     if verbose:
         print(f"Result type: {type(result)}")
     
@@ -26,7 +26,7 @@ def debug_result_info(result, verbose=False):
         
         if isinstance(eigenstate, QuasiDistribution):
             print(f"Eigenstate (QuasiDistribution):")
-            items = list(eigenstate.binary_probabilities())
+            items = list(eigenstate.binary_probabilities().items())
             print(items if verbose else f"{items[:5]} ... (truncated for display)")
         elif isinstance(eigenstate, dict):
             print(f"Eigenstate (dict):")
@@ -37,6 +37,8 @@ def debug_result_info(result, verbose=False):
             print(eigenstate if verbose else f"{eigenstate[:5]} ... (truncated for display)")
         else:
             print("Warning: Eigenstate format not recognized.")
+
+    print("\n")
 
 def decode_solution(result, n_cities):
     """
@@ -50,18 +52,23 @@ def decode_solution(result, n_cities):
     eigenstate = result.eigenstate
 
     if isinstance(eigenstate, QuasiDistribution):
-        # Handle dictionary of counts
-        max_probability_key = max(eigenstate.items(), key=lambda x: x[1])[0]
+        # Handle QuasiDistribution (e.g., from Qiskit 1.2)
+        binaryKeyedDict = eigenstate.binary_probabilities()
+        max_probability_key = max(binaryKeyedDict.items(), key=lambda x: x[1])[0]
+        max_probability = binaryKeyedDict.get(max_probability_key)
         binary = max_probability_key
     elif isinstance(eigenstate, dict):
         # Handle dictionary of counts (e.g., COBYLA)
-        max_probability_key = max(eigenstate.items(), key=lambda x: x[1])[0]
+        items = eigenstate.items()
+        max_probability_key = max(items, key=lambda x: x[1])[0]
+        max_probability = eigenstate.get(max_probability_key)
         binary = format(int(max_probability_key, 2), f'0{n_cities * n_cities}b')
     
     elif isinstance(eigenstate, np.ndarray):
         # Handle ndarray (e.g., SPSA)
         # Find the index with the maximum amplitude
         max_probability_key = np.argmax(np.abs(eigenstate))
+        max_probability = eigenstate[max_probability_key]
         binary = format(max_probability_key, f'0{n_cities * n_cities}b')
     
     else:
@@ -69,7 +76,7 @@ def decode_solution(result, n_cities):
         raise Exception(f"Could not decode quantum state from result type: {type(eigenstate)}")
 
     print("MAX PROBABILITY STATE: ", binary)
-    print("MAX PROBABILITY VALUE: ", eigenstate.get(max_probability_key))
+    print("MAX PROBABILITY VALUE: ", max_probability)
 
     # Convert to state matrix
     state_matrix = np.array(list(map(int, binary))).reshape(n_cities, n_cities)
