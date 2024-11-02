@@ -3,10 +3,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 from itertools import permutations
 
-from graph import visualize_graph
-from tsp_problems import create_tsp_graph
-
-
 def create_graph(distances, cities):
     """
     Create a NetworkX graph from the distance matrix.
@@ -79,30 +75,3 @@ def solve_tsp_with_dijkstra(distances, cities):
             best_path = current_path
     
     return best_path, shortest_distance
-
-def main():
-    """
-    Main function to demonstrate TSP solution using Dijkstra's algorithm.
-    """
-    # Create sample problem
-    distances, cities = create_tsp_graph(7)
-    
-    # Show initial graph
-    print("Initial Graph:")
-    visualize_graph(distances, cities)
-    
-    # Solve TSP
-    print("\nSolving TSP using Dijkstra's algorithm...")
-    best_path, shortest_distance = solve_tsp_with_dijkstra(distances, cities)
-    
-    # Print results
-    print(f"\nResults:")
-    print(f"Optimal path: {' -> '.join(best_path)}")
-    print(f"Total distance: {shortest_distance}")
-    
-    # Visualize solution
-    print("\nOptimal Path Visualization:")
-    visualize_graph(distances, cities, best_path)
-
-if __name__ == "__main__":
-    main()
