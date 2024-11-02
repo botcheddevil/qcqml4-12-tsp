@@ -67,7 +67,7 @@ def run_experiment(
         optimizer_choice:str,
         optimizer_maxiter:int=3,
         use_simulator=True,
-        save_graph=False):
+        save_graph=True):
     print("\n============================================\n")
     print(f"Running Experiment with: Cities={num_of_nodes}, Optimizer={optimizer_choice}, Maxiter={optimizer_maxiter}")
 
@@ -120,7 +120,7 @@ if __name__ == "__main__":
         "--save-graph",
         action="store_true",
         help="Save the graph to a PNG file instead of displaying it",
-        default=False)
+        default=True)
 
     # Define the --real flag as a boolean
     parser.add_argument(
@@ -129,9 +129,9 @@ if __name__ == "__main__":
         help="Run on IBM's real QPU",
         default=False)
     
-    group = parser.add_mutually_exclusive_group(required=True)
+    group = parser.add_mutually_exclusive_group(required=False)
     group.add_argument('--spsa', action='store_true', help="Use the SPSA optimizer", default=True)
-    group.add_argument('--cobyla', action='store_true', help="Use the COBYLA optimizer")
+    group.add_argument('--cobyla', action='store_true', help="Use the COBYLA optimizer", default=False)
 
     # Define the --real flag as a boolean
     parser.add_argument("--maxiter",

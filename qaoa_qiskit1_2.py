@@ -267,10 +267,10 @@ def solve_tsp_with_qaoa(distances, cities,
     # Set up QAOA
     p = 3  # Number of QAOA layers (keep small for hardware constraints)
 
-    if optimizer_choice == 'spsa':
-        optimizer = SPSA(maxiter=optimizer_maxiter, callback=spsa_callback)
-    elif optimizer_choice == 'cobyla':
+    if optimizer_choice == 'cobyla':
         optimizer = COBYLA(maxiter=optimizer_maxiter, callback=cobyla_callback)
+    else:
+        optimizer = SPSA(maxiter=optimizer_maxiter, callback=spsa_callback)
 
     if use_simulator:
         backend = QasmSimulator()
