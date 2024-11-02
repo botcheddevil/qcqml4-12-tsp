@@ -1,4 +1,5 @@
 import argparse
+import sys
 import time
 import numpy as np
 from qaoa_qiskit1_2 import solve_tsp_with_qaoa
@@ -59,6 +60,34 @@ def create_tsp_graph(n):
     return distance_matrix, city_names
 
 
+def run_experiment(
+        num_of_nodes:int,
+        optimizer_choice:str,
+        optimizer_maxiter:int=3):
+    print(f"Running Experiment with: Cities={num_of_nodes}, Optimizer={optimizer_choice}, Maxiter={optimizer_maxiter}")
+
+    start_time = time.time()
+    match num_of_nodes:
+        case 3: distances, cities = create_tsp_graph_3nodes()
+        case 4: distances, cities = create_tsp_graph_4nodes()
+        case 5: distances, cities = create_tsp_graph_5nodes()
+        case _: distances, cities = create_tsp_graph(num_of_nodes)
+    
+    solve_tsp_with_qaoa(distances, cities,
+        optimizer_choice=optimizer_choice,
+        optimizer_maxiter=optimizer_maxiter,
+        visualize=False,
+        use_simulator=True,
+        save_graph=False,
+        )
+
+    end_time = time.time()
+    runtime_duration = end_time - start_time
+    minutes = runtime_duration // 60
+    seconds = runtime_duration % 60
+    print(f"Script ran for: {minutes:.0f} minutes {seconds:.2f} seconds")
+
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Script to handle --sim flag and --n integer.")
@@ -83,29 +112,35 @@ if __name__ == "__main__":
         help="Run on IBM's real QPU",
         default=False)
     
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('--spsa', action='store_true', help="Use the SPSA optimizer", default=True)
+    group.add_argument('--cobyla', action='store_true', help="Use the COBYLA optimizer")
+    
     # Parse the arguments
     args = parser.parse_args()
     
     # Set variables based on the command line arguments
-    numOfNodes = args.nodes
-    saveGraph = args.save_graph
-    useSimulator = not args.real
+    num_of_nodes = args.nodes
+    save_graph = args.save_graph
+    use_simulator = not args.real
+
+    # Extract the number of nodes (cities)
+    try:
+        num_of_nodes = int(args.nodes)
+        if num_of_nodes < 2:
+            raise ValueError("Number of nodes must be 2 or greater.")
+    except ValueError as e:
+        print(f"Error: {e}")
+        sys.exit(1)
     
-    print(f"Save Graph: {saveGraph}")
-    print(f"Use Simulator: {useSimulator}")
+    # Determine which optimizer to use based on the parsed arguments
+    if args.cobyla:
+        optimizer_choice = 'COBYLA'
+    else:
+        optimizer_choice = 'SPSA'
 
-    for n in range(3,numOfNodes+1):
-        start_time = time.time()
-        match numOfNodes:
-            case 3: distances, cities = create_tsp_graph_3nodes()
-            case 4: distances, cities = create_tsp_graph_4nodes()
-            case 5: distances, cities = create_tsp_graph_5nodes()
-            case _: distances, cities = create_tsp_graph(numOfNodes)
-        
-        solve_tsp_with_qaoa(distances, cities, visualize=saveGraph, useSimulator=useSimulator, saveGraph=saveGraph)
+    print(f"Save Graph: {save_graph}")
+    print(f"Use Simulator: {use_simulator}")
+    print(f"Optimizer: {optimizer_choice}")
 
-        end_time = time.time()
-        runtime_duration = end_time - start_time
-        minutes = runtime_duration // 60
-        seconds = runtime_duration % 60
-        print(f"Script ran for: {minutes} minutes {seconds} seconds")
+    run_experiment(3, optimizer_choice, 5, use_simulator, save_graph)
