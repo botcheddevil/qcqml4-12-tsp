@@ -215,7 +215,7 @@ def create_cost_hamiltonian(distances):
                     pauli_str[qubit1] = 'Z'
                     pauli_str[qubit2] = 'Z'
                     pauli = ''.join(pauli_str)
-                    pauliList.append((pauli, distances[i][j]))
+                    pauliList.append((pauli, distances[i][j]/4))
 
     cost_ops.append(SparsePauliOp.from_list(pauliList))
 
@@ -255,7 +255,7 @@ def create_cost_hamiltonian(distances):
     return sum(cost_ops)
 
 def solve_tsp_with_qaoa(distances, cities, 
-                        optimizer_choice:str='spsa',
+                        optimizer_choice:str='SPSA',
                         optimizer_maxiter:int=10,
                         use_simulator:bool=True):
     """
@@ -267,7 +267,7 @@ def solve_tsp_with_qaoa(distances, cities,
     # Set up QAOA
     p = 3  # Number of QAOA layers (keep small for hardware constraints)
 
-    if optimizer_choice == 'cobyla':
+    if optimizer_choice == 'COBYLA':
         optimizer = COBYLA(maxiter=optimizer_maxiter, callback=cobyla_callback)
     else:
         optimizer = SPSA(maxiter=optimizer_maxiter, callback=spsa_callback)
