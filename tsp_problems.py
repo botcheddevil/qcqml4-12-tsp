@@ -135,7 +135,7 @@ def run_experiment(
         optimizer_choice:str,
         optimizer_maxiter:int=3,
         use_simulator=True,
-        save_graph=True):
+        save_graph=True, algo=3):
     print("\n============================================\n")
     print(f"Running Experiment in {'Simulator' if use_simulator else 'IBM Cloud'} with:")
     print(f"Cities={num_of_nodes}, Optimizer={optimizer_choice}, Maxiter={optimizer_maxiter}")
@@ -149,9 +149,11 @@ def run_experiment(
 
     print(f"Solving TSP for {len(cities)} cities:\n", cities, "\nDistance Matrix:\n", distances)
 
-    run_bruteforce(distances, cities, save_graph)
-
-    run_qaoa(distances, cities, optimizer_choice, optimizer_maxiter, use_simulator, save_graph)
+    if(algo & 1):
+        run_bruteforce(distances, cities, save_graph)
+        
+    if(algo & 2):
+        run_qaoa(distances, cities, optimizer_choice, optimizer_maxiter, use_simulator, save_graph)
 
 
 def print_path(distances, cities, path):
@@ -183,18 +185,23 @@ if __name__ == "__main__":
         default=3)
 
     # Define the --save-graph flag as a boolean
-    parser.add_argument(
-        "--save-graph",
+    parser.add_argument("--save-graph",
         action="store_true",
         help="Save the graph to a PNG file instead of displaying it",
         default=True)
 
     # Define the --real flag as a boolean
-    parser.add_argument(
-        "--real",
+    parser.add_argument("--real",
         action="store_true",
         help="Run on IBM's real QPU",
         default=False)
+    
+    # Define the --mode flag as a boolean
+    parser.add_argument("--algo",
+        type=int,
+        action="store_true",
+        help="Algorithms to run (1=>QAOA only, 2=>Bruteforce only, 3=>Both)",
+        default=3)
     
     group = parser.add_mutually_exclusive_group(required=False)
     group.add_argument('--spsa', action='store_true', help="Use the SPSA optimizer", default=True)
@@ -214,6 +221,7 @@ if __name__ == "__main__":
     save_graph = args.save_graph
     use_simulator = not args.real
     optimizer_maxiter = args.maxiter
+    algo = args.algo
 
     # Extract the number of nodes (cities)
     try:
@@ -234,4 +242,4 @@ if __name__ == "__main__":
     print(f"Use Simulator: {use_simulator}")
     print(f"Optimizer: {optimizer_choice}")
 
-    run_experiment(num_of_nodes, optimizer_choice, optimizer_maxiter, use_simulator=use_simulator, save_graph=save_graph)
+    run_experiment(num_of_nodes, optimizer_choice, optimizer_maxiter, use_simulator=use_simulator, save_graph=save_graph, algo=algo)
