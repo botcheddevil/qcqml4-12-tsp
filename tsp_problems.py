@@ -7,6 +7,11 @@ from bruteforce import solve_tsp_with_bruteforce
 from graph import visualize_graph
 from qaoa_qiskit1_2 import solve_tsp_with_qaoa
 
+class Algo:
+    QAOA=1
+    BRUTEFORCE=2
+    BOTH=3
+
 def create_tsp_graph_3nodes():
     """
     Create a TSP problem with 3 cities labeled V1, V2, V3
@@ -34,7 +39,7 @@ def create_tsp_graph_4nodes():
 
 def create_tsp_graph_5nodes():
     """
-    Create a TSP problem with 4 cities labeled V1, V2, V3, V4, V5.
+    Create a TSP problem with 5 cities labeled V1, V2, V3, V4, V5.
     """
     distances = np.array([
         [0, 2, 4, 1, 1],  # V1 to [V1, V2, V3, V4, V5]
@@ -46,6 +51,20 @@ def create_tsp_graph_5nodes():
     cities = ['V1', 'V2', 'V3', 'V4', 'V5']
     return distances, cities
 
+def create_tsp_graph_6nodes():
+    """
+    Create a TSP problem with 6 cities labeled V1, V2, V3, V4, V5, V6.
+    """
+    distances = np.array([
+        [0.0, 4.0, 6.0, 9.0, 5.5, 5.0], # V1 to [V1, V2, V3, V4, V5, V6]
+        [4.0, 0.0, 4.0, 2.0, 2.5, 6.0], # V2 to [V1, V2, V3, V4, V5, V6]
+        [6.0, 4.0, 0.0, 6.5, 7.5, 4.5], # V3 to [V1, V2, V3, V4, V5, V6]
+        [9.0, 2.0, 6.5, 0.0, 6.5, 4.5], # V4 to [V1, V2, V3, V4, V5, V6]
+        [5.5, 2.5, 7.5, 6.5, 0.0, 7.5], # V5 to [V1, V2, V3, V4, V5, V6]
+        [5.0, 6.0, 4.5, 4.5, 7.5, 0.0], # V6 to [V1, V2, V3, V4, V5, V6]
+    ])
+    cities = ['V1', 'V2', 'V3', 'V4', 'V5', 'V6']
+    return distances, cities
 
 def create_tsp_graph(n):
     """
@@ -135,7 +154,11 @@ def run_experiment(
         optimizer_choice:str,
         optimizer_maxiter:int=3,
         use_simulator=True,
-        save_graph=True, algo=3):
+        save_graph=True, algorithms=3):
+    
+    if(algorithms not in [Algo.QAOA, Algo.BRUTEFORCE, Algo.BOTH]):
+        print("Invalid value passed for algorithms")
+
     print("\n============================================\n")
     print(f"Running Experiment in {'Simulator' if use_simulator else 'IBM Cloud'} with:")
     print(f"Cities={num_of_nodes}, Optimizer={optimizer_choice}, Maxiter={optimizer_maxiter}")
@@ -145,14 +168,15 @@ def run_experiment(
         case 3: distances, cities = create_tsp_graph_3nodes()
         case 4: distances, cities = create_tsp_graph_4nodes()
         case 5: distances, cities = create_tsp_graph_5nodes()
+        case 6: distances, cities = create_tsp_graph_6nodes()
         case _: distances, cities = create_tsp_graph(num_of_nodes)
 
     print(f"Solving TSP for {len(cities)} cities:\n", cities, "\nDistance Matrix:\n", distances)
 
-    if(algo & 1):
+    if(algorithms & Algo.BRUTEFORCE):
         run_bruteforce(distances, cities, save_graph)
         
-    if(algo & 2):
+    if(algorithms & Algo.QAOA):
         run_qaoa(distances, cities, optimizer_choice, optimizer_maxiter, use_simulator, save_graph)
 
 
@@ -199,9 +223,9 @@ if __name__ == "__main__":
     # Define the --mode flag as a boolean
     parser.add_argument("--algo",
         type=int,
-        action="store_true",
+        choices=[Algo.QAOA, Algo.BRUTEFORCE, Algo.BOTH],
         help="Algorithms to run (1=>QAOA only, 2=>Bruteforce only, 3=>Both)",
-        default=3)
+        default=Algo.BOTH)
     
     group = parser.add_mutually_exclusive_group(required=False)
     group.add_argument('--spsa', action='store_true', help="Use the SPSA optimizer", default=True)
@@ -242,4 +266,4 @@ if __name__ == "__main__":
     print(f"Use Simulator: {use_simulator}")
     print(f"Optimizer: {optimizer_choice}")
 
-    run_experiment(num_of_nodes, optimizer_choice, optimizer_maxiter, use_simulator=use_simulator, save_graph=save_graph, algo=algo)
+    run_experiment(num_of_nodes, optimizer_choice, optimizer_maxiter, use_simulator=use_simulator, save_graph=save_graph, algorithms=algo)
