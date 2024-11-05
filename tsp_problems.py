@@ -9,41 +9,41 @@ from qaoa_qiskit1_2 import solve_tsp_with_qaoa
 
 def create_tsp_graph_3nodes():
     """
-    Create a TSP problem with 3 cities labeled A, B, C
+    Create a TSP problem with 3 cities labeled V1, V2, V3
     """
     distances = np.array([
-        [0, 2, 4],  # A to [A, B, C]
-        [2, 0, 1],  # B to [A, B, C]
-        [4, 1, 0],  # C to [A, B, C]
+        [0, 2, 4],  # V1 to [V1, V2, V3]
+        [2, 0, 1],  # V2 to [V1, V2, V3]
+        [4, 1, 0],  # V3 to [V1, V2, V3]
     ])
-    cities = ['A', 'B', 'C']
+    cities = ['V1', 'V2', 'V3']
     return distances, cities    
 
 def create_tsp_graph_4nodes():
     """
-    Create a TSP problem with 4 cities labeled A, B, C, D.
+    Create a TSP problem with 4 cities labeled V1, V2, V3, V4.
     """
     distances = np.array([
-        [0, 2, 4, 1],  # A to [A, B, C, D]
-        [2, 0, 1, 3],  # B to [A, B, C, D]
-        [4, 1, 0, 5],  # C to [A, B, C, D]
-        [1, 3, 5, 0]   # D to [A, B, C, D]
+        [0, 2, 4, 1],  # V1 to [V1, V2, V3, V4]
+        [2, 0, 1, 3],  # V2 to [V1, V2, V3, V4]
+        [4, 1, 0, 5],  # V3 to [V1, V2, V3, V4]
+        [1, 3, 5, 0]   # V4 to [V1, V2, V3, V4]
     ])
-    cities = ['A', 'B', 'C', 'D']
+    cities = ['V1', 'V2', 'V3', 'V4']
     return distances, cities
 
 def create_tsp_graph_5nodes():
     """
-    Create a TSP problem with 4 cities labeled A, B, C, D, E.
+    Create a TSP problem with 4 cities labeled V1, V2, V3, V4, V5.
     """
     distances = np.array([
-        [0, 2, 4, 1, 1],  # A to [A, B, C, D, E]
-        [2, 0, 1, 3, 1],  # B to [A, B, C, D, E]
-        [4, 1, 0, 5, 2],  # C to [A, B, C, D, E]
-        [1, 3, 5, 0, 3],  # D to [A, B, C, D, E]
-        [1, 1, 2, 3, 0],  # E to [A, B, C, D, E]
+        [0, 2, 4, 1, 1],  # V1 to [V1, V2, V3, V4, V5]
+        [2, 0, 1, 3, 1],  # V2 to [V1, V2, V3, V4, V5]
+        [4, 1, 0, 5, 2],  # V3 to [V1, V2, V3, V4, V5]
+        [1, 3, 5, 0, 3],  # V4 to [V1, V2, V3, V4, V5]
+        [1, 1, 2, 3, 0],  # V5 to [V1, V2, V3, V4, V5]
     ])
-    cities = ['A', 'B', 'C', 'D', 'E']
+    cities = ['V1', 'V2', 'V3', 'V4', 'V5']
     return distances, cities
 
 
@@ -52,7 +52,7 @@ def create_tsp_graph(n):
     Create a TSP problem with n cities labeled V1, V2, .., Vn.
     """
     # Generate random distance matrix
-    distance_matrix = np.random.randint(1, 100, size=(n, n))
+    distance_matrix = np.random.randint(1, 10, size=(n, n))
     # Make the matrix symmetric and set diagonal to zero
     distance_matrix = (distance_matrix + distance_matrix.T) / 2
     np.fill_diagonal(distance_matrix, 0)
@@ -62,26 +62,12 @@ def create_tsp_graph(n):
 
     return distance_matrix, city_names
 
-
-def run_experiment(
-        num_of_nodes:int,
-        optimizer_choice:str,
-        optimizer_maxiter:int=3,
-        use_simulator=True,
+def run_bruteforce(
+        distances, cities,
         save_graph=True):
-    print("\n============================================\n")
-    print(f"Running Experiment in {'Simulator' if use_simulator else 'IBM Cloud'} with:")
-    print(f"Cities={num_of_nodes}, Optimizer={optimizer_choice}, Maxiter={optimizer_maxiter}")
-
-    # Create problem definition
-    match num_of_nodes:
-        case 3: distances, cities = create_tsp_graph_3nodes()
-        case 4: distances, cities = create_tsp_graph_4nodes()
-        case 5: distances, cities = create_tsp_graph_5nodes()
-        case _: distances, cities = create_tsp_graph(num_of_nodes)
-
-    print(f"Solving TSP for {len(cities)} cities:\n", cities, "\nDistance Matrix:\n", distances)
-
+    """
+    Runs the experiment for a given problem using Bruteforce
+    """
     print("\nUsing Bruteforce to solve..")
     start_time = time.time()
     result_path, shortest_distance = solve_tsp_with_bruteforce(distances, cities)
@@ -99,10 +85,18 @@ def run_experiment(
         try:
             visualize_graph(distances, cities, result_path, save=True, save_prefix='Brute_')
         except Exception as ex:
-            print(f"Error in visualize_graph: {ex}")
+            print(f"Error in visualize_graph for Bruteforce: {ex}")
             traceback.print_exc()
 
-
+def run_qaoa(
+        distances, cities,
+        optimizer_choice:str,
+        optimizer_maxiter:int=3,
+        use_simulator=True,
+        save_graph=True):
+    """
+    Runs the experiment for a given problem using QAOA
+    """
     print("\nUsing QAOA..")
     start_time = time.time()
 
@@ -128,12 +122,37 @@ def run_experiment(
 
     if save_graph:
         # Generate solution graph
-        print("\nVisualizing Optimal Path:")
+        print("\nVisualizing Optimal Path computed by QAOA:")
         try:
             visualize_graph(distances, cities, result_path, save=True, save_prefix='qaoa_'+save_prefix)
         except Exception as ex:
-            print(f"Error in visualize_graph: {ex}")
+            print(f"Error in visualize_graph for QAOA: {ex}")
             traceback.print_exc()
+
+
+def run_experiment(
+        num_of_nodes:int,
+        optimizer_choice:str,
+        optimizer_maxiter:int=3,
+        use_simulator=True,
+        save_graph=True):
+    print("\n============================================\n")
+    print(f"Running Experiment in {'Simulator' if use_simulator else 'IBM Cloud'} with:")
+    print(f"Cities={num_of_nodes}, Optimizer={optimizer_choice}, Maxiter={optimizer_maxiter}")
+
+    # Create problem definition
+    match num_of_nodes:
+        case 3: distances, cities = create_tsp_graph_3nodes()
+        case 4: distances, cities = create_tsp_graph_4nodes()
+        case 5: distances, cities = create_tsp_graph_5nodes()
+        case _: distances, cities = create_tsp_graph(num_of_nodes)
+
+    print(f"Solving TSP for {len(cities)} cities:\n", cities, "\nDistance Matrix:\n", distances)
+
+    run_bruteforce(distances, cities, save_graph)
+
+    run_qaoa(distances, cities, optimizer_choice, optimizer_maxiter, use_simulator, save_graph)
+
 
 def print_path(distances, cities, path):
         path_indices = [ cities.index(c) for c in path]
