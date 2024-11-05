@@ -80,7 +80,6 @@ def decode_solution(result, n_cities):
 
     # Convert to state matrix
     state_matrix = np.array(list(map(int, binary))).reshape(n_cities, n_cities)
-
     # Build valid path
     path = []
     used_cities = set()
@@ -303,9 +302,9 @@ def solve_tsp_with_qaoa(distances, cities,
         # Print details of result to help debugging issues
         debug_result_info(result)
 
-        print("QAOA Results:")
-        # Decode and print the solution
-        path = decode_and_print_solution(result, distances, cities)
+        # Decode the solution
+        path_indices = decode_solution(result, len(cities))
+        path = [cities[i] for i in path_indices]
 
         return path, 0
 

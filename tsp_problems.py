@@ -3,6 +3,7 @@ import sys
 import time
 import traceback
 import numpy as np
+from bruteforce import solve_tsp_with_bruteforce
 from graph import visualize_graph
 from qaoa_qiskit1_2 import solve_tsp_with_qaoa
 
@@ -81,34 +82,37 @@ def run_experiment(
 
     print(f"Solving TSP for {len(cities)} cities:\n", cities, "\nDistance Matrix:\n", distances)
 
-    # print("\nUsing Dijkstra's algorith..")
-    # start_time = time.time()
-    # best_path, shortest_distance = solve_tsp_with_dijkstra(distances, cities)
+    print("\nUsing Bruteforce to solve..")
+    start_time = time.time()
+    result_path, shortest_distance = solve_tsp_with_bruteforce(distances, cities)
+    end_time = time.time()
 
-    # end_time = time.time()
-    # runtime_duration = end_time - start_time
-    # minutes = runtime_duration // 60
-    # seconds = runtime_duration % 60
-    # print(f"Dijkstra completed in: {minutes:.0f} minutes {seconds:.2f} seconds")
+    runtime_duration = end_time - start_time
+    minutes = runtime_duration // 60
+    seconds = runtime_duration % 60
+    print(f"Bruteforce completed in: {minutes:.0f} minutes {seconds:.2f} seconds")
+    print_path(distances, cities, result_path)
 
-    # if best_path and save_graph:
-    #     # Generate solution graph
-    #     print("\nVisualizing Optimal Path computed by Dijkstra's:")
-    #     try:
-    #         visualize_graph(distances, cities, best_path, save=True, save_prefix='dijkstra_')
-    #     except Exception as ex:
-    #         print(f"Error in visualize_graph: {ex}")
-    #         traceback.print_exc()
+    if result_path and save_graph:
+        # Generate solution graph
+        print("\nVisualizing Optimal Path computed by Bruteforce:")
+        try:
+            visualize_graph(distances, cities, result_path, save=True, save_prefix='Brute_')
+        except Exception as ex:
+            print(f"Error in visualize_graph: {ex}")
+            traceback.print_exc()
 
 
     print("\nUsing QAOA..")
     start_time = time.time()
 
-    optimal_path, err = solve_tsp_with_qaoa(distances, cities,
+    result_path, err = solve_tsp_with_qaoa(distances, cities,
         optimizer_choice=optimizer_choice,
         optimizer_maxiter=optimizer_maxiter,
         use_simulator=use_simulator
         )
+    if err:
+        print(f"Error running QAOA: {err}")
 
     end_time = time.time()
     runtime_duration = end_time - start_time
@@ -116,18 +120,38 @@ def run_experiment(
     seconds = runtime_duration % 60
     print(f"QAOA completed in: {minutes:.0f} minutes {seconds:.2f} seconds")
 
+    print("\nQAOA Results:")
+    print_path(distances, cities, result_path)
+
     run_mode = 'SIM' if use_simulator else 'QPU'
     save_prefix = f'{run_mode}_{optimizer_choice}-{optimizer_maxiter}_'
 
-    if not err and save_graph:
+    if save_graph:
         # Generate solution graph
         print("\nVisualizing Optimal Path:")
         try:
-            visualize_graph(distances, cities, optimal_path, save=True, save_prefix='qaoa_'+save_prefix)
+            visualize_graph(distances, cities, result_path, save=True, save_prefix='qaoa_'+save_prefix)
         except Exception as ex:
             print(f"Error in visualize_graph: {ex}")
             traceback.print_exc()
 
+def print_path(distances, cities, path):
+        path_indices = [ cities.index(c) for c in path]
+
+        # Calculate total distance and print distances between each step
+        total_distance = 0
+        print(f"\nOptimal path: {' -> '.join(path)}")
+        print("Distances between steps:")
+        
+        for i in range(len(path_indices) - 1):
+            start = path_indices[i]
+            end = path_indices[i + 1]
+            step_distance = distances[start][end]
+            total_distance += step_distance
+            print(f"{cities[start]} -> {cities[end]}: {step_distance:.1f}")
+        
+        # Print the total distance
+        print(f"\nTotal distance: {total_distance:.1f}")
 
 if __name__ == "__main__":
 
