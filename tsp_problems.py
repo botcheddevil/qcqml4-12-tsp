@@ -1,4 +1,6 @@
 import argparse
+import json
+import os
 import sys
 import time
 import traceback
@@ -70,11 +72,15 @@ def create_tsp_graph(n):
     """
     Create a TSP problem with n cities labeled V1, V2, .., Vn.
     """
-    # Generate random distance matrix
-    distance_matrix = np.random.randint(1, 10, size=(n, n))
-    # Make the matrix symmetric and set diagonal to zero
-    distance_matrix = (distance_matrix + distance_matrix.T) / 2
-    np.fill_diagonal(distance_matrix, 0)
+    distance_matrix = load_tsp(n)
+    if(distance_matrix is None):
+        print(f"No saved problem for N={n}. Generating TSP for {n} nodes")
+        # Generate random distance matrix
+        distance_matrix = np.random.randint(1, 10, size=(n, n))
+        # Make the matrix symmetric and set diagonal to zero
+        distance_matrix = (distance_matrix + distance_matrix.T) / 2
+        np.fill_diagonal(distance_matrix, 0)
+        save_tsp(n, distance_matrix)
 
     # Generate list of city names
     city_names = [f"V{i+1}" for i in range(n)]
@@ -197,6 +203,26 @@ def print_path(distances, cities, path):
         
         # Print the total distance
         print(f"\nTotal distance: {total_distance:.1f}")
+
+
+
+# Function to save array to a file
+def save_tsp(n: int, array: np.ndarray):
+    # Ensure the directory "problems" exists
+    os.makedirs("problems", exist_ok=True)
+    filepath = os.path.join("problems", f"{n}.tsp")
+    with open(filepath, 'w') as file:
+        json.dump(array.tolist(), file)
+
+# Function to load array from a file
+def load_tsp(n: int) -> np.ndarray:
+    filepath = os.path.join("problems", f"{n}.tsp")
+    if not os.path.exists(filepath):
+        return None
+    with open(filepath, 'r') as file:
+        array = json.load(file)
+    return np.array(array)
+
 
 if __name__ == "__main__":
 
