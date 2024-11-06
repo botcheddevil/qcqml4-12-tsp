@@ -80,6 +80,7 @@ def visualize_graph(distances, cities, path=None, save=False,save_prefix=''):
     if save:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         savefig_name = f"{save_prefix}{len(cities)}_nodes_{timestamp}.png"
+        os.makedirs("graphs", exist_ok=True)
         savefig_name = os.path.join("graphs", savefig_name)
         plt.savefig(savefig_name, format="png")
     else:
