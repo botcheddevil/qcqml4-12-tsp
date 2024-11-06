@@ -300,6 +300,7 @@ def solve_tsp_with_qaoa(distances, cities,
     print(f"{now} - Running {p} layer QAOA optimizer={type(optimizer).__name__} maxiter={optimizer_maxiter}")
     try:
         result = qaoa.compute_minimum_eigenvalue(cost_hamiltonian)
+        now = datetime.datetime.now()
         print(f"{now} - Completed QAOA optimizer={type(optimizer).__name__} maxiter={optimizer_maxiter}")
         # Print details of result to help debugging issues
         debug_result_info(result)
