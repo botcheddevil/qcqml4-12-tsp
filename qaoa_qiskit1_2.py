@@ -1,3 +1,4 @@
+import datetime
 import sys
 from itertools import combinations
 import numpy as np
@@ -295,10 +296,11 @@ def solve_tsp_with_qaoa(distances, cities,
     )
 
     # Run QAOA
-    print(f"Running {p} layer QAOA optimizer={type(optimizer).__name__} maxiter={optimizer_maxiter}")
+    now = datetime.datetime.now()
+    print(f"{now} - Running {p} layer QAOA optimizer={type(optimizer).__name__} maxiter={optimizer_maxiter}")
     try:
         result = qaoa.compute_minimum_eigenvalue(cost_hamiltonian)
-
+        print(f"{now} - Completed QAOA optimizer={type(optimizer).__name__} maxiter={optimizer_maxiter}")
         # Print details of result to help debugging issues
         debug_result_info(result)
 
@@ -309,6 +311,7 @@ def solve_tsp_with_qaoa(distances, cities,
         return path, 0
 
     except Exception as e:
-        print(f"Error in QAOA execution: {e}")
+        now = datetime.datetime.now()
+        print(f"{now} - Error in QAOA execution: {e}")
         traceback.print_exc()
         return None, 1
