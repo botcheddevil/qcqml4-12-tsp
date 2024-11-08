@@ -132,6 +132,7 @@ def run_qaoa(
         )
     if err:
         print(f"Error running QAOA: {err}")
+        exit(err)
 
     end_time = time.time()
     runtime_duration = end_time - start_time
