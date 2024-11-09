@@ -268,7 +268,7 @@ def solve_tsp_with_qaoa(distances, cities,
     p = 3  # Number of QAOA layers (keep small for hardware constraints)
 
     if optimizer_choice == 'COBYLA':
-        optimizer = COBYLA(maxiter=optimizer_maxiter, callback=cobyla_callback)
+        optimizer = COBYLA(maxiter=optimizer_maxiter, disp=True, callback=cobyla_callback)
     else:
         optimizer = SPSA(maxiter=optimizer_maxiter, callback=spsa_callback)
 
