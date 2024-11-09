@@ -219,8 +219,8 @@ def create_cost_hamiltonian(distances):
 
     cost_ops.append(SparsePauliOp.from_list(pauliList))
 
-    # Add sufficiently strong penalty terms
-    penalty = 9999.0
+    # Calculate a sufficiently strong penalty coefficient based on our distance matrix
+    penalty = distances.max() * n_cities
 
     # One city per time step
     pauliList = []
