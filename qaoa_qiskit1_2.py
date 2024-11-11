@@ -1,5 +1,6 @@
 import datetime
 import sys
+import penalty
 from itertools import combinations
 import numpy as np
 from qiskit.result.distributions.quasi import QuasiDistribution
@@ -193,6 +194,7 @@ def spsa_callback(evaluation, params, value, step_size=None, accepted=None):
         print(message)
         last_print_time = current_time
 
+
 def create_cost_hamiltonian(distances):
     """
     Create the cost Hamiltonian for the QAOA.
@@ -220,7 +222,7 @@ def create_cost_hamiltonian(distances):
     cost_ops.append(SparsePauliOp.from_list(pauliList))
 
     # Calculate a sufficiently strong penalty coefficient based on our distance matrix
-    penalty = distances.max() * n_cities
+    penaltyCoeff = penalty.calculate(distances)
 
     # One city per time step
     pauliList = []
@@ -233,7 +235,7 @@ def create_cost_hamiltonian(distances):
             pauli_str[qubit1] = 'Z'
             pauli_str[qubit2] = 'Z'
             pauli = ''.join(pauli_str)
-            pauliList.append((pauli, penalty))
+            pauliList.append((pauli, penaltyCoeff))
 
     cost_ops.append(SparsePauliOp.from_list(pauliList,))
 
@@ -248,7 +250,7 @@ def create_cost_hamiltonian(distances):
             pauli_str[qubit1] = 'Z'
             pauli_str[qubit2] = 'Z'
             pauli = ''.join(pauli_str)
-            pauliList.append((pauli, penalty))
+            pauliList.append((pauli, penaltyCoeff))
 
     cost_ops.append(SparsePauliOp.from_list(pauliList))
 
