@@ -10,14 +10,16 @@ if __name__ == "__main__":
         penalty.setConst(1)
         penalty.setOp('+')
         for k in range(10):
-            for r in range(4):
+            for r in range(6):
+                # Repeat same experiment to test the consistency of results
                 run_experiment(5, optimizer_choice='COBYLA', optimizer_maxiter=maxiter, use_simulator=True, save_graph=False, algorithms=Algo.QAOA)
             penalty.incConst()
 
         penalty.setConst(1)
         penalty.setOp('x')
         for k in range(10):
-            for r in range(4):
+            for r in range(6):
+                # Repeat same experiment to test the consistency of results
                 run_experiment(5, optimizer_choice='COBYLA', optimizer_maxiter=maxiter, use_simulator=True, save_graph=False, algorithms=Algo.QAOA)
             penalty.incConst()
 
