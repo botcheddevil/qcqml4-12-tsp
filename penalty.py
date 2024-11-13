@@ -5,17 +5,17 @@ const = 1
 op = "+"
 approxRatios = {}
 
-def reset():
+def setConst(newConst):
     global const
-    const=1
+    const=newConst
 
 def incConst():
     global const
     const+=1
 
-def toggleOp():
+def setOp(opNew):
     global op
-    op = "x" if op=="+" else "x"
+    op = opNew
 
 def calculate(distances: ndarray):
     global op

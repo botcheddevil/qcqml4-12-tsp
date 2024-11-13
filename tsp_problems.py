@@ -197,8 +197,11 @@ def run_experiment(
     if(algorithms & Algo.QAOA):
         qaoa_distance = run_qaoa(distances, cities, optimizer_choice, optimizer_maxiter, use_simulator, save_graph)
         ar = qaoa_distance/min_cost
-        configKey = f"{optimizer_choice}:MI{optimizer_maxiter}:{penalty.key()}"
-        approxRatios[configKey] = ar
+        configKey = f"N{num_of_nodes}:{optimizer_choice[0]}:I{optimizer_maxiter}:{penalty.key()}"
+        if configKey in approxRatios:
+            approxRatios[configKey].append(ar)
+        else:
+            approxRatios[configKey] = [ar]
 
 
 def print_path(distances, cities, path):
