@@ -72,7 +72,6 @@ def create_tsp_graph(n):
     Create a TSP problem with n cities labeled V1, V2, .., Vn.
     """
     n_str = str(n)
-    print(n_str, FIXED_TSP.keys())
     # Use fixed problem definitions for up to 6 nodes
     if n_str in FIXED_TSP.keys():
         tsp = FIXED_TSP[n_str]
