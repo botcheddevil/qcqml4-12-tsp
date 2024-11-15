@@ -29,13 +29,13 @@ if __name__ == "__main__":
     bestApproxMean = statistics.mean(bestResult[1])
     print('Best Mean Approx Ratio = ', bestApproxMean)
     
-    bestConfigs = []
+    bestMeanConfigs = []
     for item in approxRatios.items():
         meanApprox = statistics.mean(item[1])
         print('debug: item: ',item)
         print('debug: meanApprox: ',meanApprox)
         if bestApproxMean == meanApprox:
-            bestConfigs.append(item[0])
+            bestMeanConfigs.append(item[0])
         
     print(f"Got best mean approx ratio {bestApproxMean} for these configs:")
-    print(bestConfigs)
+    print(bestMeanConfigs)
