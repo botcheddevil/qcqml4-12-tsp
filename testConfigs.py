@@ -10,14 +10,15 @@ import penalty
 
 
 def save_results(results):
-    filepath = "testConfigs_results.res"
+    filepath = "testConfigs_results2.json"
     with open(filepath, 'w') as file:
         json.dump(results, file)
         
 
 if __name__ == "__main__":
     
-    testConfigs = [(4,'+',8), (4,'x',10), (5,'x',7), (6,'+',4), (6,'+',6), (6,'x',9)]
+    # testConfigs = [(4,'+',8), (4,'x',10), (5,'x',7), (6,'+',4), (6,'+',6), (6,'x',9)]
+    testConfigs = [(4,'+',8),(6,'x',9)]
     for maxiter, penaltyOp, penaltyConst in testConfigs:
         penalty.setConst(penaltyConst)
         penalty.setOp(penaltyOp)
