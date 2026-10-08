@@ -1,0 +1,12 @@
+qcqml4-12-tsp
+Copyright 2024 Anshuk Kumar
+
+This product includes software developed by Anshuk Kumar
+(https://github.com/botcheddevil/qcqml4-12-tsp).
+
+The Apache License, Version 2.0 in this repository covers the contributions
+authored by Anshuk Kumar, including compare.py in all revisions published in
+this repository. Contributions by other authors remain under the terms chosen
+by those authors. Third-party libraries (Qiskit, NetworkX, NumPy, Matplotlib
+and others listed in requirements.txt) are not included here and retain their
+own licences.
